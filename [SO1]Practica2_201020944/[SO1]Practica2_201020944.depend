@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1473754187 source:/home/luis/Documentos/Practica2/[SO1]Practica2_201020944/main.c
+	<ncurses.h>
+	<stdio.h>
+	<stdlib.h>
+
