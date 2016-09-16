@@ -1,14 +1,28 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <CodeBlocks_layout_file>
-	<ActiveTarget name="Debug" />
+	<ActiveTarget name="Release" />
 	<File name="main.c" open="1" top="1" tabpos="1" split="0" active="1" splitpos="0" zoom_1="-1" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="1897" topLine="70" />
+			<Cursor1 position="1231" topLine="54" />
 		</Cursor>
+		<Folding>
+			<Collapse line="57" />
+			<Collapse line="99" />
+			<Collapse line="127" />
+			<Collapse line="141" />
+			<Collapse line="160" />
+			<Collapse line="217" />
+			<Collapse line="252" />
+			<Collapse line="272" />
+			<Collapse line="288" />
+			<Collapse line="295" />
+			<Collapse line="299" />
+			<Collapse line="307" />
+		</Folding>
 	</File>
 	<File name="util.h" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="50" topLine="0" />
+			<Cursor1 position="1769" topLine="38" />
 		</Cursor>
 	</File>
 </CodeBlocks_layout_file>
