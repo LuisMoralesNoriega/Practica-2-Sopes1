@@ -6,6 +6,7 @@
 #define _jug1 3
 #define _jug2 4
 #define _tiempo 5
+#define _invasor 6
 
 
 #include <pthread.h> // Ejecución con varios hilos.
@@ -32,6 +33,16 @@ extern "C" {
         int vida;
     } Jugador; /* Representa a un jugador */
 
+    typedef struct {
+        int pos_x; // cooredenad inicial en x
+        int pos_y; // coordenada inicial en y
+        int tipo; // puntos obtenidos
+    }Invasor; /* Representa a un invasor */
+
+    typedef struct {
+        Invasor lista[20]; // lista de pelotas disponibles para un juego
+    } List_invasores; /* Representa una lista de invasores */
+
     //Memoria Compartida
 
     // Bandera espera
@@ -39,7 +50,7 @@ extern "C" {
     int id_espera; // Identificador para la memoria de la bandera de espera
     int *espera = NULL; //Apuntador a la zona de memoria de la bandera de espera
 
-
+    // Semaforo
     key_t llave_semaforo; // Llave para el semaforo
     int id_semaforo; // Identificador para el array de semaforos
 
@@ -58,6 +69,15 @@ extern "C" {
     int id_tiempo; // Identificador para la memoria del tiempo
     int *tiempo; // Apuntador a la zona de memoria del tiempo
 
+    //invasores
+    key_t llave_invasor; // Llave para la memoria compartida de la(s) pelota(s)
+    int id_invasor; // Identificador para la memoria de la(s) pelota(s)
+    List_invasores *invasores; // Apuntador a la zona de memoria de la(s) pelota(s)
+
+    //hilo de juego
+    pthread_t id_hilo_juego; // Identificador del hilo_juego
+    //hilo de tiempo
+    pthread_t id_hilo_tiempo; // Identificador del hilo del hilo_tiempo
 
 #ifdef __cplusplus
 }

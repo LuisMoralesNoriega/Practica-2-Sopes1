@@ -1,11 +1,12 @@
 # depslib dependency file v1.0
-1473931040 source:/home/luis/Documentos/Practica2/[SO1]Practica2_201020944/main.c
+1474098144 source:/home/luis/Documentos/Practica2/[SO1]Practica2_201020944/main.c
 	<ncurses.h>
 	<stdio.h>
 	<stdlib.h>
+	<pthread.h>
 	"util.h"
 
-1473924369 /home/luis/Documentos/Practica2/[SO1]Practica2_201020944/util.h
+1474064551 /home/luis/Documentos/Practica2/[SO1]Practica2_201020944/util.h
 	<pthread.h>
 	<sys/ipc.h>
 	<sys/sem.h>

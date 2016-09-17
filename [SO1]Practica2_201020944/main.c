@@ -1,11 +1,14 @@
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include "util.h"
+
 
 WINDOW *bienvenida; //pantallas del juego
 WINDOW *j1;
 WINDOW *j2;
+WINDOW *datos;
 int jugador;// variable para ver que jugador soy
 
 //----------- MEMORIA COMPARTIDA ---------------------------------------
@@ -31,10 +34,19 @@ void EsperarRival();//metodo para esperar al rival
 
 //----------- JUEGO ----------------------------------------------------
 void IniciarJugadores();
+void IniciarInvasores();
+void CrearTablero();
+void DibujarInvasores();
+
+//----------- HILOS ----------------------------------------------------
+void *hilo_juego();
+void *hilo_tiempo();
+
 
 
 int main()
 {
+
     MemoriaComparida();
 
     semaforos();
@@ -51,6 +63,7 @@ int main()
 
     return 0;
 }
+
 
 //----------------------------------------------- AREA MEMORIA COMPARTIDA --------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------
@@ -95,6 +108,14 @@ void MemoriaComparida(){
     tiempo = (int *) shmat(id_tiempo, (char *) 0, 0);
     /* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .*/
 
+
+    // Conseguimos una clave para la memoria compartida.
+    llave_invasor = ftok("/bin/ls", _invasor);
+    // Creamos la memoria con la clave recién conseguida.
+    id_invasor = shmget(llave_invasor, sizeof (List_invasores), 0777 | IPC_CREAT);
+    // Hacemos que uno de nuestros punteros apunte a la zona de memoria recién creada.
+    invasores = (List_invasores*) shmat(id_invasor, NULL, 0);
+
 }
 
 void LiberarMemoria(){
@@ -117,14 +138,22 @@ void LiberarMemoria(){
     /* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .*/
 
     // Desasociamos el puntero de la memoria compartida.
+    shmdt((char *) invasores);
+    // Liberamos la memoria compartida.
+    shmctl(id_invasor, IPC_RMID, (struct shmid_ds *) NULL);
+    /* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .*/
+
+    // Desasociamos el puntero de la memoria compartida.
     shmdt((char *) tiempo);
     // Liberamos la memoria compartida.
     shmctl(id_tiempo, IPC_RMID, (struct shmid_ds *) NULL);
     /* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .*/
 }
 
+
 //----------------------------------------------- AREA PANTALLAS -----------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------
+
 void IniciarPantalla(){
     int pulso = 0; // variable para ver que tecla apacho
     initscr(); //inicia ncurses
@@ -240,11 +269,28 @@ void EsperarRival(){
 void PantallaJuego(){
 
     IniciarJugadores();
+    IniciarInvasores();
 
     clear();
-    WINDOW *juego = newwin(15,50,1,1);
+    datos = newwin(15,50,1,1);
     bkgd(COLOR_PAIR(4));
-    mvprintw(7,31,"Jugador: %d",jugador);
+
+    // Creamos el hilo del juego
+    pthread_create(&id_hilo_juego, NULL, hilo_juego, NULL);
+    // Creamos el hilo del reloj
+    pthread_create(&id_hilo_tiempo, NULL, hilo_tiempo, NULL);
+
+
+
+    int pulso;
+    while(pulso=getch() != 't'){
+        kill(&id_hilo_juego);
+    }
+
+    // matamos el hilo del juego
+    kill(&id_hilo_juego);
+    // matamos el hilo del reloj
+    kill(&id_hilo_tiempo);
 
     getch();
 }
@@ -252,24 +298,159 @@ void PantallaJuego(){
 
 void IniciarJugadores(){
     //jugador 1
-    jug1->pos_x = 23;
-    jug1->pos_y = 1;
+    jug1->pos_x = 25;
+    jug1->pos_y = 2;
     jug1->puntos = 0;
     jug1->vida = 5;
 
     //jugador 2
-    jug2->pos_x = 23;
-    jug2->pos_y = 22;
+    jug2->pos_x = 25;
+    jug2->pos_y = 26;
     jug2->puntos = 0;
     jug2->vida = 5;
 
     // Tiempo
     tiempo[0] = 0;
+    tiempo[1] = 0;
 }
 
+void IniciarInvasores(){
+    int x = 5;
+    int y = 8;
+    int t = 1;
+    int i;
+    int cnt = 1;
+    for(i = 0; i < 20; i++){
+        cnt++;
+        if(cnt == 5){
+            invasores->lista[i].pos_x = x;
+            invasores->lista[i].pos_y = y;
+            invasores->lista[i].tipo = 2;
+            x = 5;
+            y = y + 3;
+            cnt = 1;
+        }else{
+            invasores->lista[i].pos_x = x;
+            invasores->lista[i].pos_y = y;
+            invasores->lista[i].tipo = 1;
+            x = x + 10;
+        }
+    }
+}
+
+void MostrarDatos(){
+    if(jugador == 1){
+        mvprintw(5,60,"Jugador: %d",jugador);
+        mvprintw(6,62,"Puntos: %d",jug1->puntos);
+        mvprintw(7,62,"Vidas: %d",jug1->vida);
+        mvprintw(24,60,"Jugador: 2");
+        mvprintw(25,62,"Puntos: %d",jug2->puntos);
+        mvprintw(26,62,"Vidas: %d",jug2->vida);
+    }else if(jugador == 2){
+        mvprintw(5,60,"Jugador: %d",jugador);
+        mvprintw(6,62,"Puntos: %d",jug2->puntos);
+        mvprintw(7,62,"Vidas: %d",jug2->vida);
+        mvprintw(24,60,"Jugador: 1");
+        mvprintw(25,62,"Puntos: %d",jug1->puntos);
+        mvprintw(26,62,"Vidas: %d",jug1->vida);
+    }
+
+    mvprintw(15,60,"Tiempo:");
+    mvprintw(16,62,"%d:%d",tiempo[1],tiempo[0]/1400);
+
+}
+
+void CrearTablero(){
+    int i;
+    char c;
+    //lineas horizontales
+    c = 95;
+    for(i = 1; i <= 74; i++){
+        move(0,i);
+        printw("%c",c);
+        move(27,i);
+        printw("%c",c);
+    }
+
+    for(i = 59; i <= 74; i++){
+        move(10,i);
+        printw("%c",c);
+        move(20,i);
+        printw("%c",c);
+    }
+
+    //lineas verticales
+    c = 124;
+    for(i = 1; i <= 27; i++){
+        move(i,1);
+        printw("%c",c);
+        move(i,75);
+        printw("%c",c);
+    }
+
+    for(i = 1; i <= 27; i++){
+        move(i,58);
+        printw("%c",c);
+    }
+
+}
+
+void DibujarJugadores(){
+    int x;
+    int y;
+    int i;
+
+    x = jug1->pos_x;
+    y = jug1->pos_y;
+
+    // Dibuja jugador 1
+    move(y,x-1);
+    printw("<");
+    for (i = 0; i < 5; i++) {
+        move(y,x+i);
+        printw("-");
+    }
+    move(y,x+5);
+    printw(">");
+
+    x = jug2->pos_x;
+    y = jug2->pos_y;
+
+    // Dibuja jugador 2
+    move(y,x-1);
+    printw("<");
+    for (i = 0; i < 5; i++) {
+        move(y,x+i);
+        printw("-");
+    }
+    move(y,x+5);
+    printw(">");
+
+}
+
+void DibujarInvasores(){
+    int x = 0;
+    int y = 0;
+    int t = 0;
+    int i;
+    for(i = 0; i < 20; i++){
+        x = invasores->lista[i].pos_x;
+        y = invasores->lista[i].pos_y;
+        t = invasores->lista[i].tipo;
+        move(y,x+5);
+        if(t == 1){
+            printw("\\-.-/");
+        }else if(t == 2){
+            printw("/-.-\\");
+        }
+    }
+
+
+}
 
 //----------------------------------------------- AREA SEMAFORO ------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------
+
 void semaforos() {
     /* Se obtien una clave para el semaforo de jugador 1. */
     llave_semaforo = ftok("/bin/ls", _semaforo);
@@ -313,6 +494,36 @@ void sem_V() {
 }
 
 
+//----------------------------------------------- AREA HILOS ------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------
+
+void* hilo_juego() {
+    //for(;;){
+    while(1){
+        clear();
+        CrearTablero();
+        DibujarJugadores();
+        DibujarInvasores();
+        MostrarDatos();
+        refresh();
+    }
+    //}
+}
+
+
+void* hilo_tiempo() {
+    while (1) {
+        usleep(1 * 1000); // 1 ms
+        tiempo[0] = tiempo[0] + 1;
+        if(tiempo[0]/1400 == 60){
+            tiempo[0] = 0;
+            tiempo[1] = tiempo[1] + 1;
+        }
+    }
+}
+
+//----------------------------------------------- AREA DEKKER ------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------
 
 
 
