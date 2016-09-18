@@ -7,6 +7,8 @@
 #define _jug2 4
 #define _tiempo 5
 #define _invasor 6
+#define _key 7
+#define _disparo 8
 
 
 #include <pthread.h> // Ejecución con varios hilos.
@@ -37,11 +39,22 @@ extern "C" {
         int pos_x; // cooredenad inicial en x
         int pos_y; // coordenada inicial en y
         int tipo; // puntos obtenidos
+        bool vivo; // nos muestra si es ta vivo
     }Invasor; /* Representa a un invasor */
 
     typedef struct {
         Invasor lista[20]; // lista de pelotas disponibles para un juego
     } List_invasores; /* Representa una lista de invasores */
+
+    typedef struct {
+        int pos_x; // posicion de disparo en x
+        int pos_y; // posicion de disparo en y
+    }Disparo; /* Representa un disparo */
+
+    typedef struct {
+        Disparo lista[1]; // lista de disparos
+    } List_disparos; /* Representa una lista de disparos */
+
 
     //Memoria Compartida
 
@@ -74,10 +87,23 @@ extern "C" {
     int id_invasor; // Identificador para la memoria de la(s) pelota(s)
     List_invasores *invasores; // Apuntador a la zona de memoria de la(s) pelota(s)
 
+    //disparos
+    key_t llave_disparo; // Llave para la memoria compartida de la(s) pelota(s)
+    int id_disparo; // Identificador para la memoria de la(s) pelota(s)
+    List_disparos *disparos; // Apuntador a la zona de memoria de la(s) pelota(s)
+
+    // Key del teclado
+    key_t llave_key; //Llave para la memoria compartida de key
+    int id_key; // Identificador para la memoria de key
+    char *key; // Apuntador a la zona de memoria de key
+
     //hilo de juego
     pthread_t id_hilo_juego; // Identificador del hilo_juego
     //hilo de tiempo
     pthread_t id_hilo_tiempo; // Identificador del hilo del hilo_tiempo
+    //hilo de invasores
+    pthread_t id_hilo_invasores; // Identificador del hilo del hilo_tiempo
+
 
 #ifdef __cplusplus
 }
