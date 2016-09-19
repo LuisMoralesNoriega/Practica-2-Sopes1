@@ -6,23 +6,23 @@
 
 
 WINDOW *bienvenida; //pantallas del juego
-WINDOW *j1;
-WINDOW *j2;
-WINDOW *datos;
+WINDOW *j1; //pantalla de espera
+WINDOW *j2; //pantalla de espera
+WINDOW *datos; // pantalla de datos del juego
 int jugador;// variable para ver que jugador soy
 
 //----------- MEMORIA COMPARTIDA ---------------------------------------
 
-void MemoriaComparida(); //metodo de memoria compartida
-void LiberarMemoria();
+void MemoriaComparida(); //metodo de creacion de memoria compartida
+void LiberarMemoria(); //metodo para liberar la memoria compartida al final del juego
 
 //----------- SEMAFORO -------------------------------------------------
 
-void semaforos();
-int crea_sem(int);
-int abre_sem();
-void sem_P();
-void sem_V();
+void semaforos(); //metodo para iniciar los semaforos del juego
+int crea_sem(int); //metodo para obtener el id del semaforo a utliizar
+int abre_sem(); // metodo para abrir un semaforo
+void sem_P(); // metodo para poner en rojo semaforo
+void sem_V(); // metodo para poner en verde el semaforo
 
 //---------- PANTALLAS -------------------------------------------------
 
@@ -30,25 +30,33 @@ void IniciarPantalla();//metodo para iniciar pantalla
 void Bienvenida();//metodo para pantalla de bienvenida
 void SeleccionarBando();//metodo para pantalla de seleccion de jugador
 void EsperarRival();//metodo para esperar al rival
-void PantallaJuego();
-void FinJuego();
+void PantallaJuego();//metodo para pantalla principal de juego
+void FinJuego();//metodo para pantalla del fin del juego
 
 //----------- JUEGO ----------------------------------------------------
-void IniciarJugadores();
-void IniciarInvasores();
-void CrearTablero();
-void DibujarInvasores();
-void Disparar();
+void IniciarJugadores(); //metodo para iniciar las variables de los jugadores
+void IniciarInvasores(); //metodo para iniciar las variables de los invasores
+void CrearTablero(); //metodo para crear el tablero del juego
+void DibujarInvasores(); //metodo para dibujar los invaroes en el tablero
+void Disparar(); //metodo para disparar en el juego
 
 //----------- HILOS ----------------------------------------------------
-void *hilo_juego();
-void *hilo_tiempo();
-void *hilo_invasores();
+void *hilo_juego(); //metodo de hilo de juego
+void *hilo_tiempo(); //metodo para el tiempo de juego
+void *hilo_invasores(); //metodo para los invasores del juego
+
+//----------- DEKKER ----------------------------------------------------
+void inicializar_dekker(); //metodo para iniciar las variables del metodo de dekker
+void delay(); //metodo para el retardo de dekker
+void region_critica(); //metodo para entrar a la region critica
+void *p_j1(); //Hilo donde pide entrar a la region critica el jugador 1
+void *p_j2(); //Hilo donde pide entrar a la region critica el jugador 2
 
 
+//----------------------------------------------- AREA MAIN ----------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------------
 
-int main()
-{
+int main(){
 
     MemoriaComparida();
 
@@ -133,6 +141,30 @@ void MemoriaComparida(){
     // Hacemos que uno de nuestros punteros apunte a la zona de memoria recién creada.
     disparos = (List_disparos*) shmat(id_disparo, NULL, 0);
 
+    // Conseguimos una clave para la memoria compartida.
+    llave_j1qe = ftok("/bin/ls", _j1qe);
+    // Creamos la memoria con la clave recién conseguida.
+    id_j1qe = shmget(llave_j1qe, sizeof (bool), 0777 | IPC_CREAT);
+    // Hacemos que uno de nuestros punteros apunte a la zona de memoria recién creada.
+    j1_quiere_entrar = (bool *) shmat(id_j1qe, (char *) 0, 0);
+    /* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .*/
+
+    // Conseguimos una clave para la memoria compartida.
+    llave_j2qe = ftok("/bin/ls", _j2qe);
+    // Creamos la memoria con la clave recién conseguida.
+    id_j2qe = shmget(llave_j2qe, sizeof (bool), 0777 | IPC_CREAT);
+    // Hacemos que uno de nuestros punteros apunte a la zona de memoria recién creada.
+    j2_quiere_entrar = (bool *) shmat(id_j2qe, (char *) 0, 0);
+    /* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .*/
+
+    // Conseguimos una clave para la memoria compartida.
+    llave_turno = ftok("/bin/ls", _turno);
+    // Creamos la memoria con la clave recién conseguida.
+    id_turno = shmget(llave_turno, sizeof (int), 0777 | IPC_CREAT);
+    // Hacemos que uno de nuestros punteros apunte a la zona de memoria recién creada.
+    turno = (int *) shmat(id_turno, (char *) 0, 0);
+    /* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .*/
+
 }
 
 void LiberarMemoria(){
@@ -177,6 +209,25 @@ void LiberarMemoria(){
     // Liberamos la memoria compartida.
     shmctl(id_tiempo, IPC_RMID, (struct shmid_ds *) NULL);
     /* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .*/
+
+    // Desasociamos el puntero de la memoria compartida.
+    shmdt((char *) j1_quiere_entrar);
+    // Liberamos la memoria compartida.
+    shmctl(id_j1qe, IPC_RMID, (struct shmid_ds *) NULL);
+    /* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .*/
+
+    // Desasociamos el puntero de la memoria compartida.
+    shmdt((char *) j2_quiere_entrar);
+    // Liberamos la memoria compartida.
+    shmctl(id_j2qe, IPC_RMID, (struct shmid_ds *) NULL);
+    /* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .*/
+
+    // Desasociamos el puntero de la memoria compartida.
+    shmdt((char *) turno);
+    // Liberamos la memoria compartida.
+    shmctl(id_turno, IPC_RMID, (struct shmid_ds *) NULL);
+    /* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .*/
+
 }
 
 
@@ -312,6 +363,10 @@ void PantallaJuego(){
     pthread_create(&id_hilo_tiempo, NULL, hilo_tiempo, NULL);
     // Creamos el hilo de los invasores
     pthread_create(&id_hilo_invasores, NULL, hilo_invasores, NULL);
+    // Creamos el hilo del proceso 1
+    pthread_create(&id_hilo_p1, NULL, (void*) p_j1, NULL);
+    // Creamos el hilo del proceso 2
+    pthread_create(&id_hilo_p2, NULL, (void*) p_j2, NULL);
 
 
     while (key[0] != 't'){
@@ -359,6 +414,10 @@ void PantallaJuego(){
     // matamos el hilo de invasores
     pthread_kill(&id_hilo_invasores);
 
+    // matamos el hilo de p1
+    kill(&id_hilo_p1);
+    // matamos el hilo de p2
+    kill(&id_hilo_p2);
 
 //    getch();
 }
@@ -568,7 +627,7 @@ void Disparar(){
 
 
     while(1){
-        usleep(3 * 1000);
+        usleep(10 * 1000);
         move(y,x);
         printw("*");
         refresh();
@@ -650,6 +709,7 @@ void Disparar(){
     }
 }
 
+
 //----------------------------------------------- AREA SEMAFORO ------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------
 
@@ -702,6 +762,7 @@ void sem_V() {
 void* hilo_juego() {
     //for(;;){
     while(1){
+        usleep(5 * 1000);
         if(espera[3]==0){
             clear();
             CrearTablero();
@@ -735,7 +796,7 @@ void* hilo_tiempo() {
 void* hilo_invasores(){
     int cnt = 0;
     while(1){
-        usleep(2 * 1000);
+        usleep(3 * 1000);
         if(cnt == 0){
             int i;
             for(i = 0; i < 20; i++){
@@ -754,6 +815,113 @@ void* hilo_invasores(){
 
 //----------------------------------------------- AREA DEKKER ------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------------------
+
+void inicializar_dekker() {
+    j1_quiere_entrar[0] = false;
+    j1_quiere_entrar[0] = false;
+    turno[0] = 1;
+}
+
+void delay() {
+    srand(time(NULL));
+
+    int tiempo = (rand() % 100) * 50;
+
+    int i;
+    for (i = 0; i < tiempo && espera[3] != 3; i++) {
+        int j;
+        for (j = 0; j < tiempo && espera[3] != 3; j++) {
+            /* no hace nada */
+        }
+    }
+}
+
+void region_critica() {
+    key[0] = getch();
+    //mover jugadores
+        if(jugador == 1){
+            // Izquierda jugador 1
+            if ((key[0] == 'a') && jug1->pos_x > 10) {
+                jug1->pos_x = jug1->pos_x - 1;
+            }
+            // Derecha jugador 1
+            if ((key[0] == 'd') && jug1->pos_x < 45) {
+                jug1->pos_x = jug1->pos_x + 1;
+            }
+
+            if ((key[0] == 'w') && jug1->pos_x < 45) {
+                espera[4] = 1;
+            }
+
+        }else if(jugador == 2){
+            // Izquierda jugador 1
+            if ((key[0] == 'a') && jug2->pos_x > 10) {
+                jug2->pos_x = jug2->pos_x - 1;
+            }
+            // Derecha jugador 1
+            if ((key[0] == 'd') && jug2->pos_x < 45) {
+                jug2->pos_x = jug2->pos_x + 1;
+            }
+
+            if ((key[0] == 'w') && jug2->pos_x < 45) {
+                espera[4] = 1;
+            }
+
+        }
+    delay();
+}
+
+void* p_j1() {
+
+    while (espera[3] == 1) {
+
+        j1_quiere_entrar[0] = true;
+
+        while (j2_quiere_entrar[0] && espera[3] != 1) {
+
+            if (turno[0] == 2) {
+                j1_quiere_entrar[0] = false;
+                while (turno[0] == 2 && espera[3] != 1) {
+                    /* esperar */
+                }
+                j1_quiere_entrar[0] = true;
+            }
+        }
+
+        if (espera[3] == 1) break;
+
+        region_critica();
+
+        turno[0] = 2;
+        j1_quiere_entrar[0] = false;
+    }
+}
+
+void* p_j2() {
+
+    while (espera[3] != 1) {
+
+        j2_quiere_entrar[0] = true;
+
+        while (j1_quiere_entrar[0] && espera[3] != 1) {
+
+            if (turno[0] == 1) {
+                j2_quiere_entrar[0] = false;
+                while (turno[0] == 1 && espera[3] != 1) {
+                    /* esperar */
+                }
+                j2_quiere_entrar[0] = true;
+            }
+        }
+
+        if (espera[3] == 1) break;
+
+        region_critica();
+
+        turno[0] = 1;
+        j2_quiere_entrar[0] = false;
+    }
+}
 
 
 

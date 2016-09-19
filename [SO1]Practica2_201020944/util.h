@@ -1,6 +1,7 @@
 #ifndef UTIL_H_INCLUDED
 #define UTIL_H_INCLUDED
 
+/* Enteros para asignar memoria compartida */
 #define _espera 1
 #define _semaforo 2
 #define _jug1 3
@@ -9,18 +10,17 @@
 #define _invasor 6
 #define _key 7
 #define _disparo 8
+#define _j1qe 9
+#define _j2qe 10
+#define _turno 11
 
-
+//librerias para el juego
 #include <pthread.h> // Ejecución con varios hilos.
-#include <sys/ipc.h>
-#include <sys/sem.h>
-#include <sys/shm.h>
+#include <sys/ipc.h> // para llave de memoria comptida
+#include <sys/sem.h> // semaforos del sistema
+#include <sys/shm.h> // semaforos
 #include <sys/types.h> // Para key_t
 #include <time.h> // Proporciona time() que nos devuelve la hora.
-
-
-/* Enteros para asignar memoria compartida */
-#define _espera 1
 
 
 #ifdef __cplusplus
@@ -38,12 +38,12 @@ extern "C" {
     typedef struct {
         int pos_x; // cooredenad inicial en x
         int pos_y; // coordenada inicial en y
-        int tipo; // puntos obtenidos
-        bool vivo; // nos muestra si es ta vivo
+        int tipo; //  tipo de invasor
+        bool vivo; // nos muestra si esta vivo
     }Invasor; /* Representa a un invasor */
 
     typedef struct {
-        Invasor lista[20]; // lista de pelotas disponibles para un juego
+        Invasor lista[20]; // lista de invasores para el juego
     } List_invasores; /* Representa una lista de invasores */
 
     typedef struct {
@@ -97,7 +97,25 @@ extern "C" {
     int id_key; // Identificador para la memoria de key
     char *key; // Apuntador a la zona de memoria de key
 
-    //hilo de juego
+
+    key_t llave_j1qe; // Llave para la memoria compartida de Judaro1_quiere_entrar
+    int id_j1qe; // Identificador para la memoria de judor1_quiere_entrar
+    bool *j1_quiere_entrar; // Apuntador a la zona de memoria de la bandera para el proceso 1
+
+    key_t llave_j2qe; // Llave para la memoria compartida de jugador2_quiere_entrar
+    int id_j2qe; // Identificador para la memoria de jugador2_quiere_entrar
+    bool *j2_quiere_entrar; // Apuntador a la zona de memoria de la bandera para el proceso 2
+
+    key_t llave_turno; // Llave para la memoria compartida de turno
+    int id_turno; // Identificador para la memoria de turno
+    int *turno; // Apuntador a la zona de memoria de turno
+
+
+    //HILOS DEL JUEGO
+    pthread_t id_hilo_p1; // Identificador de p_jugado1
+
+    pthread_t id_hilo_p2; // Identificador de p_jugador2
+
     pthread_t id_hilo_juego; // Identificador del hilo_juego
     //hilo de tiempo
     pthread_t id_hilo_tiempo; // Identificador del hilo del hilo_tiempo
